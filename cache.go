@@ -21,6 +21,25 @@ func (cache *Cache) Set(key string, data string) {
 	cache.mutex.Unlock()
 }
 
+func (cache *Cache) SafeBetExists(key string,data string) (found bool, set bool) {
+	cache.mutex.Lock()
+	item, exists := cache.items[key]
+	if !exists || item.expired() {
+		item := &Item{data: data}
+		item.touch(cache.ttl)
+		cache.items[key] = item
+		found = false
+		set = true
+	} else {
+		item.touch(cache.ttl)
+		data = item.data
+		found = true
+		set = false
+	}
+	cache.mutex.Unlock()
+	return
+}
+
 // Get is a thread-safe way to lookup items
 // Every lookup, also touches the item, hence extending it's life
 func (cache *Cache) Get(key string) (data string, found bool) {
